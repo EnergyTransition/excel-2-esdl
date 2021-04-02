@@ -120,17 +120,21 @@ The example Excel files has five tabs:
 The ESDL Output
 ---------------
 
-The ESDL output, when loaded into the ESDL MapEditor, looks like this. Each commodity/carrier gets its own color.
+The ESDL output, when loaded into the ESDL MapEditor, looks like this:
 
 ![ESDL Output](doc/ESDL_output.png)
 
+Each commodity/carrier gets its own color:
+- Electricity: blue
+- Natural Gas: red
+- Heat: green
+
 The following assets are shown:
 - GasProducer
-- Pipe that connects the GasProducer with the PowerPlant (in red)
+- Pipe that connects the GasProducer with the PowerPlant (red solid line)
 - PowerPlant
-- ElectricityCable that connects the PowerPlant to the ElectricityNetwork
+- ElectricityCable that connects the PowerPlant to the ElectricityNetwork (blue solid line)
 - ElectricityNetwork 
-- HeatPump, logically connected to the ElectricityNetwork
-- HeatingDemand, logically connected to the HeatPump
-- ElectricityDemand, logically connected to the ElectricityNetwork
-
+- HeatPump, logically connected to the ElectricityNetwork (blue dashed line)
+- HeatingDemand, logically connected to the HeatPump (green dashed line)
+- ElectricityDemand, logically connected to the ElectricityNetwork (blue dashed line)
