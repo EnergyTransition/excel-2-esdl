@@ -1,0 +1,2 @@
+pyesdl==21.4.1
+openpyxl==3.0.7
