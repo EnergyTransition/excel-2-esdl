@@ -129,6 +129,7 @@ The following assets are shown:
 - Pipe that connects the GasProducer with the PowerPlant (in red)
 - PowerPlant
 - ElectricityCable that connects the PowerPlant to the ElectricityNetwork
+- ElectricityNetwork 
 - HeatPump, logically connected to the ElectricityNetwork
 - HeatingDemand, logically connected to the HeatPump
 - ElectricityDemand, logically connected to the ElectricityNetwork
