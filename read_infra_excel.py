@@ -18,6 +18,8 @@ from openpyxl import load_workbook
 def read_infra_from_excel(filename):
     wb = load_workbook(filename, data_only=True)
 
+    area_dict = dict()
+    building_dict = dict()
     carrier_dict = dict()
     cons_prod_dict = dict()
     conv_dict = dict()
@@ -25,6 +27,36 @@ def read_infra_from_excel(filename):
     cables_pipes_conns_list = list()
 
     if wb:
+        sheet = wb["Areas"]
+        contents = sheet.values
+
+        i = 0
+        for row in contents:
+            if i == 0:
+                keys = row
+
+            if i > 0:
+                d = dict(zip(keys, row))
+                area_id = d["ID"]
+                area_dict[area_id] = d
+
+            i = i + 1
+
+        sheet = wb["Buildings"]
+        contents = sheet.values
+
+        i = 0
+        for row in contents:
+            if i == 0:
+                keys = row
+
+            if i > 0:
+                d = dict(zip(keys, row))
+                bld_id = d["ID"]
+                building_dict[bld_id] = d
+
+            i = i + 1
+
         sheet = wb["Carriers"]
         contents = sheet.values
 
@@ -99,4 +131,4 @@ def read_infra_from_excel(filename):
 
             i = i + 1
 
-    return carrier_dict, cons_prod_dict, conv_dict, transp_dict, cables_pipes_conns_list
+    return area_dict, building_dict, carrier_dict, cons_prod_dict, conv_dict, transp_dict, cables_pipes_conns_list

@@ -17,6 +17,88 @@ import importlib
 import esdl
 from esdl import EnergySystem
 from esdl.esdl_handler import EnergySystemHandler
+from shape import Shape
+
+
+def add_areas(esh: EnergySystemHandler, es: EnergySystem, area_dict: dict):
+    found_top_level_area = False
+    tl_area = es.instance[0].area
+
+    for area_id, ar_dict in area_dict.items():
+        if ar_dict["TopLevelArea"].upper() == "TRUE":
+            if found_top_level_area:
+                print("Error in Excel input - Areas tab contains more than one top level area")
+                exit(1)
+            found_top_level_area = True
+
+            # remove current toplevel area from EnergySystem
+            es.instance[0].area.delete()
+
+            if ar_dict["Scope"] == "NULL":
+                tl_area_scope = esdl.AreaScopeEnum.from_string('UNDEFINED')
+            else:
+                tl_area_scope = esdl.AreaScopeEnum.from_string(ar_dict["Scope"])
+            tl_area = esdl.Area(id=ar_dict["ID"], name=ar_dict["Name"], scope=tl_area_scope)
+
+            if ar_dict["Area_WKT"] is not None and ar_dict["Area_WKT"] != "" and ar_dict["Area_WKT"] != "NULL":
+                shape = Shape.parse_wkt(ar_dict["Area_WKT"])
+                tl_area.geometry = shape.get_esdl()
+
+            es.instance[0].area = tl_area
+            esh.add_object(tl_area)
+        else:
+            if ar_dict["Scope"] == "NULL":
+                sub_area_scope = esdl.AreaScopeEnum.from_string('UNDEFINED')
+            else:
+                sub_area_scope = esdl.AreaScopeEnum.from_string(ar_dict["Scope"])
+            sub_area = esdl.Area(id=ar_dict["ID"], name=ar_dict["Name"], scope=sub_area_scope)
+
+            if ar_dict["Area_WKT"] is not None and ar_dict["Area_WKT"] != "" and ar_dict["Area_WKT"] != "NULL":
+                shape = Shape.parse_wkt(ar_dict["Area_WKT"])
+                sub_area.geometry = shape.get_esdl()
+
+            if ar_dict["Parent_Area_ID"] == "NULL":
+                # Add to top level area
+                tl_area.area.append(sub_area)
+            else:
+                # Find Parent Area
+                parent_area = esh.get_by_id(ar_dict["Parent_Area_ID"])
+                if not parent_area:
+                    print(f"Parent Area of Area with ID {ar_dict['ID']} not found - adding to top level area")
+                    tl_area.area.append(sub_area)
+                else:
+                    parent_area.area.append(sub_area)
+            esh.add_object(sub_area)
+
+
+def add_buildings(esh: EnergySystemHandler, es: EnergySystem, building_dict: dict):
+    # To dynamically create instances of ESDL objects
+    module = importlib.import_module("esdl")
+    tl_area = es.instance[0].area
+
+    for bld_id, bld_dict in building_dict.items():
+        bld_class = getattr(module, bld_dict["ESDLType"])
+        bld = bld_class()
+        if not isinstance(bld, esdl.AbstractBuilding):
+            raise Exception("Only subtypes of esdl.AbstractBuilding can be used as ESDLType in the Buildings tab")
+
+        bld.id = bld_dict["ID"]
+        bld.name = bld_dict["Name"]
+
+        if bld_dict["Lat"] is not None and bld_dict["Lat"] != "NULL" and \
+                bld_dict["Lon"] is not None and bld_dict["Lon"] != "NULL":
+            bld.geometry = esdl.Point(lat=float(bld_dict["Lat"]), lon=float(bld_dict["Lon"]))
+
+        if bld_dict["Parent_Area_ID"] == "NULL":
+            tl_area.asset.append(bld)
+        else:
+            area = esh.get_by_id(bld_dict["Parent_Area_ID"])
+            if not area:
+                print(f"Parent Area of Building with ID {bld_dict['ID']} not found - adding to top level area")
+                tl_area.asset.append(bld)
+            else:
+                area.asset.append(bld)
+        esh.add_object(bld)
 
 
 def add_carriers(esh: EnergySystemHandler, es: EnergySystem, carrier_dict: dict):
@@ -42,7 +124,7 @@ def add_carriers(esh: EnergySystemHandler, es: EnergySystem, carrier_dict: dict)
 def add_producers_consumers(
     esh: EnergySystemHandler, es: EnergySystem, cons_prod_dict: dict
 ):
-    area = es.instance[0].area
+    tl_area = es.instance[0].area
 
     # To dynamically create instances of ESDL objects
     module = importlib.import_module("esdl")
@@ -78,14 +160,24 @@ def add_producers_consumers(
             profile.value = float(cp_info["Profile_Value"])
             port.profile.append(profile)
 
-        cp.geometry = esdl.Point(lat=float(cp_info["Lat"]), lon=float(cp_info["Lon"]))
+        if cp_info["Lat"] is not None and cp_info["Lat"] != "NULL" and \
+                cp_info["Lon"] is not None and cp_info["Lon"] != "NULL":
+            cp.geometry = esdl.Point(lat=float(cp_info["Lat"]), lon=float(cp_info["Lon"]))
 
-        area.asset.append(cp)
+        if cp_info["AreaBld_ID"] == "NULL":
+            tl_area.asset.append(cp)
+        else:
+            asset_container = esh.get_by_id(cp_info["AreaBld_ID"])
+            if not asset_container:
+                print(f"Parent container of asset with ID {cp_info['ID']} not found - adding to top level area")
+                tl_area.asset.append(cp)
+            else:
+                asset_container.asset.append(cp)
         esh.add_object(cp)
 
 
 def add_conversions(esh: EnergySystemHandler, es: EnergySystem, conv_dict: dict):
-    area = es.instance[0].area
+    tl_area = es.instance[0].area
 
     # To dynamically create instances of ESDL objects
     module = importlib.import_module("esdl")
@@ -128,16 +220,26 @@ def add_conversions(esh: EnergySystemHandler, es: EnergySystem, conv_dict: dict)
                 conv.port.append(outp)
                 esh.add_object(outp)
 
-        conv.geometry = esdl.Point(
-            lat=float(conv_info["Lat"]), lon=float(conv_info["Lon"])
-        )
+        if conv_info["Lat"] is not None and conv_info["Lat"] != "NULL" and \
+                conv_info["Lon"] is not None and conv_info["Lon"] != "NULL":
+            conv.geometry = esdl.Point(
+                lat=float(conv_info["Lat"]), lon=float(conv_info["Lon"])
+            )
 
-        area.asset.append(conv)
+        if conv_info["AreaBld_ID"] == "NULL":
+            tl_area.asset.append(conv)
+        else:
+            asset_container = esh.get_by_id(conv_info["AreaBld_ID"])
+            if not asset_container:
+                print(f"Parent container of asset with ID {conv_info['ID']} not found - adding to top level area")
+                tl_area.asset.append(conv)
+            else:
+                asset_container.asset.append(conv)
         esh.add_object(conv)
 
 
 def add_transports(esh: EnergySystemHandler, es: EnergySystem, transp_dict: dict):
-    area = es.instance[0].area
+    tl_area = es.instance[0].area
 
     # To dynamically create instances of ESDL objects
     module = importlib.import_module("esdl")
@@ -159,23 +261,36 @@ def add_transports(esh: EnergySystemHandler, es: EnergySystem, transp_dict: dict
         transp.port.append(outp)
         esh.add_object(outp)
 
-        transp.geometry = esdl.Point(
-            lat=float(transp_info["Lat"]), lon=float(transp_info["Lon"])
-        )
+        if transp_info["Lat"] is not None and transp_info["Lat"] != "NULL" and \
+                transp_info["Lon"] is not None and transp_info["Lon"] != "NULL":
+            transp.geometry = esdl.Point(
+                lat=float(transp_info["Lat"]), lon=float(transp_info["Lon"])
+            )
 
-        area.asset.append(transp)
+        if transp_info["AreaBld_ID"] == "NULL":
+            tl_area.asset.append(transp)
+        else:
+            asset_container = esh.get_by_id(transp_info["AreaBld_ID"])
+            if not asset_container:
+                print(f"Parent container of asset with ID {transp_info['ID']} not found - adding to top level area")
+                tl_area.asset.append(transp)
+            else:
+                asset_container.asset.append(transp)
         esh.add_object(transp)
 
 
 def add_cabels_pipes_connections(
     esh: EnergySystemHandler, es: EnergySystem, cables_pipes_conns_list
 ):
-    area = es.instance[0].area
+    tl_area = es.instance[0].area
 
     # To dynamically create instances of ESDL objects
     module = importlib.import_module("esdl")
 
     for cpc in cables_pipes_conns_list:
+        inp_location = None
+        outp_location = None
+
         from_port = esh.get_by_id(cpc["From_Port_ID"])
         to_port = esh.get_by_id(cpc["To_Port_ID"])
 
@@ -200,17 +315,19 @@ def add_cabels_pipes_connections(
                 inp.carrier = from_port.carrier
 
                 from_asset = from_port.eContainer()
-                inp_location = esdl.Point(
-                    lat=from_asset.geometry.lat, lon=from_asset.geometry.lon
-                )
+                if from_asset.geometry:
+                    inp_location = esdl.Point(
+                        lat=from_asset.geometry.lat, lon=from_asset.geometry.lon
+                    )
             else:
                 inp.connectedTo.append(to_port)
                 inp.carrier = to_port.carrier
 
                 to_asset = to_port.eContainer()
-                inp_location = esdl.Point(
-                    lat=to_asset.geometry.lat, lon=to_asset.geometry.lon
-                )
+                if to_asset.geometry:
+                    inp_location = esdl.Point(
+                        lat=to_asset.geometry.lat, lon=to_asset.geometry.lon
+                    )
 
             link.port.append(inp)
             esh.add_object(inp)
@@ -221,24 +338,35 @@ def add_cabels_pipes_connections(
                 outp.carrier = from_port.carrier
 
                 from_asset = from_port.eContainer()
-                outp_location = esdl.Point(
-                    lat=from_asset.geometry.lat, lon=from_asset.geometry.lon
-                )
+                if from_asset.geometry:
+                    outp_location = esdl.Point(
+                        lat=from_asset.geometry.lat, lon=from_asset.geometry.lon
+                    )
             else:
                 outp.connectedTo.append(to_port)
                 outp.carrier = to_port.carrier
 
                 to_asset = to_port.eContainer()
-                outp_location = esdl.Point(
-                    lat=to_asset.geometry.lat, lon=to_asset.geometry.lon
-                )
+                if to_asset.geometry:
+                    outp_location = esdl.Point(
+                        lat=to_asset.geometry.lat, lon=to_asset.geometry.lon
+                    )
 
             link.port.append(outp)
             esh.add_object(outp)
 
-            link.geometry = esdl.Line()
-            link.geometry.point.append(inp_location)
-            link.geometry.point.append(outp_location)
+            if inp_location and outp_location:
+                link.geometry = esdl.Line()
+                link.geometry.point.append(inp_location)
+                link.geometry.point.append(outp_location)
 
-            area.asset.append(link)
+            if cpc["AreaBld_ID"] == "NULL":
+                tl_area.asset.append(link)
+            else:
+                asset_container = esh.get_by_id(cpc["AreaBld_ID"])
+                if not asset_container:
+                    print(f"Parent container of asset with ID {cpc['ID']} not found - adding to top level area")
+                    tl_area.asset.append(link)
+                else:
+                    asset_container.asset.append(link)
             esh.add_object(link)
