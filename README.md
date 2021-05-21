@@ -34,6 +34,7 @@ The example Excel files have seven tabs:
    | Scope | (Optional) ESDL Scope of the Area |
    | Parent_Area_ID | ID of the parent area this Area belongs to |
    | Area_WKT | (Optional) Well Known Text representation of the geometry of the Area |
+   | Sector_ID | The ID of the sector the Area belongs to |
 
 2. Buildings
 
@@ -47,6 +48,7 @@ The example Excel files have seven tabs:
    | Lat | (Optional) The lattitude of the location of the Building asset |
    | Lon | (Optional) The longitude of the location of the Building asset |
    | Parent_Area_ID | ID of the area this Building will be added to |
+   | Sector_ID | The ID of the sector the Building belongs to |
 
 3. Carriers
 
@@ -59,7 +61,6 @@ The example Excel files have seven tabs:
    | ID | The ID of the Carrier or Commodity |
    | Name | The name of the Carrier or Commodity |
    | ESDLType | The ESDL class name of the Carrier or Commodity |
-
 
 4. ConsumerProducer
 
@@ -77,12 +78,16 @@ The example Excel files have seven tabs:
    | Lon | (Optional) The longitude of the location of the Consumer or Producer asset |
    | AreaBld_ID | (Optional) The ID of the Area or Building the Consumer or Producer asset will be added to |
    | Power | The power in Watts of the Consumer or Producer asset |
-   | Port_ID | The ID of the InPort of the Consumer or the OutPort of the Producer |
+   | Attributex | The name of the attribute of the Conversion asset (x must be an integer number) |
+   | Valuex | The value of the attribute of the Conversion asset (x must be an integer number) |   | Port_ID | The ID of the InPort of the Consumer or the OutPort of the Producer |
    | Carrier_ID | The ID of the carrier that is attached to the Port (see Carriers tab for available Carriers) |
    | Profile_ID | The ID of the profile that is attached to the Port |
-   | Profile_ESDLType | Type of the profile that is attached to the Port (currently only SingleValue is supported) |
+   | Profile_ESDLType | Type of the profile that is attached to the Port (SingleValue and InfluxDBProfile supported) |
+   | Profile_Physical_Quantity | The physical quantity of the profile (see esdl.PhysicalQuantityEnum for values ) |
    | Profile_Value | Value of the profile that is attached to the Port |
    | Profile_Unit | Unit of th value of the profile that is attached to the Port |
+   | Profile_Reference_ID | Reference to an InfluxDBProfile ID |
+   | Sector_ID | The ID of the sector the Consumer or Producer asset belongs to |
 
 5. Conversion
 
@@ -100,8 +105,8 @@ The example Excel files have seven tabs:
    | Lon | (Optional) The longitude of the location of the Conversion asset |
    | AreaBld_ID | (Optional) The ID of the Area or Building the Conversion asset will be added to |
    | Power | The power in Watts of the Conversion asset |
-   | Efficiency_attribute | The name of the attribute that describes the efficiency of the Conversion asset |
-   | Efficiency_value | The efficiency value of the Conversion asset |
+   | Attributex | The name of the attribute of the Conversion asset (x must be an integer number) |
+   | Valuex | The value of the attribute of the Conversion asset (x must be an integer number) |
    | InPort1_ID | The ID of the first InPort of the Conversion asset |
    | InPort1_Carrier | The ID of the carrier of the first InPort of the Conversion asset |
    | InPort2_ID | The ID of the second InPort of the Conversion asset |
@@ -110,6 +115,7 @@ The example Excel files have seven tabs:
    | OutPort1_Carrier | The ID of the carrier of the first OutPort of the Conversion asset |
    | OutPort2_ID | The ID of the second OutPort of the Conversion asset |
    | OutPort2_Carrier | The ID of the carrier of the second OutPort of the Conversion asset |
+   | Sector_ID | The ID of the sector the Conversion asset belongs to |
 
 6. Transport
 
@@ -128,10 +134,13 @@ The example Excel files have seven tabs:
    | Lat | (Optional) The lattitude of the location of the Transport asset |
    | Lon | (Optional) The longitude of the location of the Transport asset |
    | AreaBld_ID | (Optional) The ID of the Area or Building the Transport asset will be added to |
+   | Attributex | The name of the attribute of the Conversion asset (x must be an integer number) |
+   | Valuex | The value of the attribute of the Conversion asset (x must be an integer number) |
    | InPort1_ID | The ID of the InPort of the Transport asset |
    | InPort1_Carrier | The ID of the carrier of the InPort of the Transport asset |
    | OutPort1_ID | The ID of the OutPort of the Transport asset |
    | OutPort1_Carrier | The ID of the carrier of the OutPort of the Transport asset |
+   | Sector_ID | The ID of the sector the Transport asset belongs to |
 
 7. CablesPipesConnections
 
@@ -150,6 +159,35 @@ The example Excel files have seven tabs:
    | AreaBld_ID | (Optional) The ID of the Area or Building the Cable or Pipe will be added to |
    | From_Port_ID | The ID of the port of the first asset that will be connected |
    | To_Port_ID | The ID of the port of the second asset that will be connected |
+   | Attributex | The name of the attribute of the Conversion asset (x must be an integer number) |
+   | Valuex | The value of the attribute of the Conversion asset (x must be an integer number) |
+   | Sector_ID | The ID of the sector the asset belongs to |
+
+8. InfluxDBProfiles
+
+   This tab defines InfluxDBProfiles that can be referred to from the ConsumerProducer tab. An example value for a
+   datetime would be "2018-12-31T23:00:00.0000"
+
+   | ID | The ID of the profile |
+   | Name | The name of the profile |
+   | Host | The host(name) of the Influx Database server |
+   | Port | The port of the Influx Database server |
+   | Database | The name of the database |
+   | Measurement | The name of the measurement |
+   | Field | The name of the field |
+   | Start_DateTime | Start date and time of the profile information (format: YYYY-MM-DDThh:mm:ss.zzzz) |
+   | End_DateTime | End date and time of the profile information (format: YYYY-MM-DDThh:mm:ss.zzzz) |
+
+9. Sectors
+
+   This tab defines sectors which can be assigned to Areas and Assets.
+   
+   | Column | Description |
+   | --- | ---|
+   | ID | The ID of the Sector |
+   | Name | The name of the Sector |
+   | Description | (Optional) The description of the Sector |
+   | Code | (Optional) The code of the Sector |
 
 Examples
 ========
@@ -189,3 +227,7 @@ the MapEditor uses the knowledge that an asset is in a certain area, to assign a
 The ESDL output, when loaded into the ESDL MapEditor, looks like this:
 
 ![ESDL Output](doc/ESDL_output_2.png)
+
+Example 3
+---------
+Example 3 contains InfluxDB profiles, sectors and proper setting of quantities and units for profiles.

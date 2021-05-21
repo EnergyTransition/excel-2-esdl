@@ -1,17 +1,21 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<esdl:EnergySystem xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:esdl="http://www.tno.nl/esdl" name="ES1" description="Energy System created from an Excel file" id="9b1380d6-b24a-420d-9ce2-efc44e96290c">
-  <instance xsi:type="esdl:Instance" id="ab9ba8f6-c457-4e3b-a68a-870ef2be3a41" name="Instance1">
-    <area xsi:type="esdl:Area" id="ddda55f1-6b63-4e14-ae7a-05b202d903bf" name="Area1">
+<esdl:EnergySystem xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:esdl="http://www.tno.nl/esdl" name="ES1" description="Energy System created from an Excel file" id="9569773e-a874-4f8b-8822-da627d2045b4">
+  <instance xsi:type="esdl:Instance" id="f9a6bec4-2d81-4efc-87bf-63da9953744f" name="Instance1">
+    <area xsi:type="esdl:Area" id="8d716e31-b5fe-4d7e-a012-91a728c86d69" name="Area1">
       <asset xsi:type="esdl:HeatingDemand" name="HeatingDemand1" power="10000.0" id="HD1">
         <geometry xsi:type="esdl:Point" lat="52.11" lon="4.51"/>
         <port xsi:type="esdl:InPort" id="HD1IP1" carrier="H" name="In" connectedTo="HP1OP1">
-          <profile xsi:type="esdl:SingleValue" value="50.0" id="HD1P1"/>
+          <profile xsi:type="esdl:SingleValue" id="HD1P1" value="50.0">
+            <profileQuantityAndUnit xsi:type="esdl:QuantityAndUnitType" unit="JOULE" physicalQuantity="ENERGY" id="52429587-088d-4dfb-afad-23d9cd356211" description="ENERGY in GJ" multiplier="GIGA"/>
+          </profile>
         </port>
       </asset>
       <asset xsi:type="esdl:ElectricityDemand" name="ElectricityDemand1" power="10000.0" id="ED1">
         <geometry xsi:type="esdl:Point" lat="52.105" lon="4.51"/>
         <port xsi:type="esdl:InPort" id="ED1IP1" carrier="E" name="In" connectedTo="EN1OP1">
-          <profile xsi:type="esdl:SingleValue" value="20.0" id="ED1P1"/>
+          <profile xsi:type="esdl:SingleValue" id="ED1P1" value="20.0">
+            <profileQuantityAndUnit xsi:type="esdl:QuantityAndUnitType" unit="JOULE" physicalQuantity="ENERGY" id="a60dcbf5-fdf1-4b49-a1a8-4ccbafbe98d1" description="ENERGY in GJ" multiplier="GIGA"/>
+          </profile>
         </port>
       </asset>
       <asset xsi:type="esdl:GasProducer" name="GasProducer1" power="1000000000.0" id="GP1">
@@ -51,7 +55,8 @@
       </asset>
     </area>
   </instance>
-  <energySystemInformation xsi:type="esdl:EnergySystemInformation">
+  <energySystemInformation xsi:type="esdl:EnergySystemInformation" id="d2cf29b2-d59a-4a11-b67a-7a95ea139f97">
+    <sectors xsi:type="esdl:Sectors" id="a344bb0f-131c-4783-87b3-7030193bd7e2"/>
     <carriers xsi:type="esdl:Carriers" id="carrs">
       <carrier xsi:type="esdl:ElectricityCommodity" name="Electricity" id="E"/>
       <carrier xsi:type="esdl:GasCommodity" name="Natural Gas" id="G"/>
