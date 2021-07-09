@@ -53,7 +53,7 @@ def convert_excel_to_esdl(excel_filename, esdl_filename, es_name, es_descr, inst
     add_buildings(esh, es, building_dict)
     add_carriers(esh, es, carrier_dict)
     add_producers_consumers(esh, es, cons_prod_dict, influxdb_profiles_dict)
-    add_conversions(esh, es, conv_dict)
+    add_conversions(esh, es, conv_dict, influxdb_profiles_dict)
     add_transports(esh, es, transp_dict)
     add_cabels_pipes_connections(esh, es, cables_pipes_conns_list)
 
@@ -84,6 +84,15 @@ if __name__ == "__main__":
         esdl_filename="example_generated_network_3.esdl",
         es_name="ES3",
         es_descr="Energy System created from an Excel file with Sectors, InfluxDBProfiles, QuantityAndUnits",
+        inst_title="Instance1",
+        area_title="Area1",
+    )
+
+    convert_excel_to_esdl(
+        excel_filename=r"data\infrastructure_4.xlsx",
+        esdl_filename="example_generated_network_4.esdl",
+        es_name="ES4",
+        es_descr="Energy System created from an Excel file with ControlStrategies and MarginalCosts",
         inst_title="Instance1",
         area_title="Area1",
     )

@@ -79,7 +79,8 @@ The example Excel files have seven tabs:
    | AreaBld_ID | (Optional) The ID of the Area or Building the Consumer or Producer asset will be added to |
    | Power | The power in Watts of the Consumer or Producer asset |
    | Attributex | The name of the attribute of the Conversion asset (x must be an integer number) |
-   | Valuex | The value of the attribute of the Conversion asset (x must be an integer number) |   | Port_ID | The ID of the InPort of the Consumer or the OutPort of the Producer |
+   | Valuex | The value of the attribute of the Conversion asset (x must be an integer number) |
+   | Port_ID | The ID of the InPort of the Consumer or the OutPort of the Producer |
    | Carrier_ID | The ID of the carrier that is attached to the Port (see Carriers tab for available Carriers) |
    | Profile_ID | The ID of the profile that is attached to the Port |
    | Profile_ESDLType | Type of the profile that is attached to the Port (SingleValue and InfluxDBProfile supported) |

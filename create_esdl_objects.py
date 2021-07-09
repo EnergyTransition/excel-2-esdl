@@ -31,7 +31,9 @@ multiplier_dict = {
 
 unit_dict = {
     "W": "WATT",
-    "J": "JOULE"
+    "J": "JOULE",
+    "EURO": "EURO",
+    "EUR": "EURO"
 }
 
 
@@ -42,10 +44,14 @@ def create_qau(physical_quantity_string, unit_string):
         description=physical_quantity_string + ' in ' + unit_string
     )
 
-    # Assume unit_string contains 1 or 2 characters for now
-    qau.unit = esdl.UnitEnum.from_string(unit_dict[unit_string[-1]])
-    if len(unit_string) == 2:
-        qau.multiplier = esdl.MultiplierEnum.from_string(multiplier_dict[unit_string[0]])
+    if unit_string in unit_dict:
+        qau.unit = esdl.UnitEnum.from_string(unit_dict[unit_string])
+        qau.multiplier = esdl.MultiplierEnum.from_string("NONE")
+    else:
+        # Assume unit_string contains 1 or 2 characters for now
+        qau.unit = esdl.UnitEnum.from_string(unit_dict[unit_string[-1]])
+        if len(unit_string) == 2:
+            qau.multiplier = esdl.MultiplierEnum.from_string(multiplier_dict[unit_string[0]])
 
     return qau
 
@@ -225,6 +231,33 @@ def add_carriers(esh: EnergySystemHandler, es: EnergySystem, carrier_dict: dict)
         esh.add_object(carr)
 
 
+def add_control_strategy(esh: EnergySystemHandler, es: EnergySystem, strategy):
+    services = es.services
+    if not services:
+        services = esdl.Services(id=str(uuid4()))
+        es.services = services
+        esh.add_object(services)
+
+    services.service.append(strategy)
+
+
+def create_influxdb_profile(influxdb_profile_data, multiplier, physical_quantity, unit):
+    profile = esdl.InfluxDBProfile(
+        id=influxdb_profile_data["ID"],
+        name=influxdb_profile_data["Name"],
+        host=influxdb_profile_data["Host"],
+        port=int(influxdb_profile_data["Port"]),
+        database=influxdb_profile_data["Database"],
+        measurement=influxdb_profile_data["Measurement"],
+        field=influxdb_profile_data["Field"],
+        startDate=EDate.from_string(influxdb_profile_data["Start_DateTime"]),
+        endDate=EDate.from_string(influxdb_profile_data["End_DateTime"]),
+        multiplier=float(multiplier),
+        profileQuantityAndUnit=create_qau(physical_quantity, unit)
+    )
+    return profile
+
+
 def add_producers_consumers(
     esh: EnergySystemHandler, es: EnergySystem, cons_prod_dict: dict, influxdb_profile_dict: dict
 ):
@@ -271,19 +304,11 @@ def add_producers_consumers(
             )
             port.profile.append(profile)
         elif cp_info["Profile_ESDLType"] == "InfluxDBProfile":
-            influxdb_profile_data = influxdb_profile_dict[cp_info["Profile_Reference_ID"]]
-            profile = esdl.InfluxDBProfile(
-                id=influxdb_profile_data["ID"],
-                name=influxdb_profile_data["Name"],
-                host=influxdb_profile_data["Host"],
-                port=int(influxdb_profile_data["Port"]),
-                database=influxdb_profile_data["Database"],
-                measurement=influxdb_profile_data["Measurement"],
-                field=influxdb_profile_data["Field"],
-                startDate=EDate.from_string(influxdb_profile_data["Start_DateTime"]),
-                endDate=EDate.from_string(influxdb_profile_data["End_DateTime"]),
-                multiplier=float(cp_info["Profile_Value"]),
-                profileQuantityAndUnit=create_qau(cp_info["Profile_Physical_Quantity"], cp_info["Profile_Unit"])
+            profile = create_influxdb_profile(
+                influxdb_profile_data=influxdb_profile_dict[cp_info["Profile_Reference_ID"]],
+                multiplier=cp_info["Profile_Value"],
+                physical_quantity=cp_info["Profile_Physical_Quantity"],
+                unit=cp_info["Profile_Unit"]
             )
             port.profile.append(profile)
 
@@ -292,6 +317,21 @@ def add_producers_consumers(
 
         if "Sector_ID" in cp_info and cp_info["Sector_ID"] not in [None, "", "NULL"]:
             cp.sector = esh.get_by_id(cp_info["Sector_ID"])
+
+        if "MC_Value" in cp_info and cp_info["MC_Value"] not in [None, "", "NULL"]:
+            cost_info = esdl.CostInformation(id=str(uuid4()))
+            cost_info.marginalCosts = esdl.SingleValue(id=str(uuid4()), value=float(cp_info["MC_Value"]))
+            cost_info.marginalCosts.profileQuantityAndUnit = create_qau("COST", "EURO")
+            cp.costInformation = cost_info
+        elif "MC_Profile_ID" in cp_info and cp_info["MC_Profile_ID"] not in [None, "", "NULL"]:
+            cost_info = esdl.CostInformation(id=str(uuid4()))
+            cost_info.marginalCosts = create_influxdb_profile(
+                influxdb_profile_data=influxdb_profile_dict[cp_info["MC_Profile_ID"]],
+                multiplier=1.0,
+                physical_quantity="COST",
+                unit="EURO"
+            )
+            cp.costInformation = cost_info
 
         if cp_info["AreaBld_ID"] in [None, "", "NULL"]:
             tl_area.asset.append(cp)
@@ -305,7 +345,7 @@ def add_producers_consumers(
         esh.add_object(cp)
 
 
-def add_conversions(esh: EnergySystemHandler, es: EnergySystem, conv_dict: dict):
+def add_conversions(esh: EnergySystemHandler, es: EnergySystem, conv_dict: dict, influxdb_profile_dict: dict):
     tl_area = es.instance[0].area
 
     # To dynamically create instances of ESDL objects
@@ -350,6 +390,61 @@ def add_conversions(esh: EnergySystemHandler, es: EnergySystem, conv_dict: dict)
 
         if "Sector_ID" in conv_info and conv_info["Sector_ID"] not in [None, "", "NULL"]:
             conv.sector = esh.get_by_id(conv_info["Sector_ID"])
+
+        if "Control_Strategy" in conv_info and conv_info["Control_Strategy"] not in [None, "", "NULL"]:
+            strategy_str = conv_info["Control_Strategy"]
+            if strategy_str not in ["DrivenByDemand", "DrivenBySupply", "DrivenByProfile"]:
+                print("Only DrivenByDemand, DrivenBySupply and DrivenByProfile are supported at this moment")
+            else:
+                strategy_class = getattr(module, strategy_str)
+                strategy = strategy_class()
+                if strategy_str == "DrivenByDemand":
+                    strategy.id = "DbD_" + conv.id
+                elif strategy_str == 'DrivenBySupply':
+                    strategy.id = "DbS_" + conv.id
+                elif strategy_str == 'DrivenByProfile':
+                    strategy.id = "DbP_" + conv.id
+
+                port_id_str = conv_info["CS_Port_ID"]
+                port = esh.get_by_id(port_id_str)
+                if not port:
+                    print(f"Port of ControlStrategy for asset with ID {conv_info['ID']} not found ")
+                else:
+                    if strategy_str == "DrivenByDemand":
+                        strategy.outPort = port
+                    elif strategy_str == 'DrivenBySupply':
+                        strategy.InPort = port
+                    elif strategy_str == 'DrivenByProfile':
+                        strategy.port = port
+
+                if strategy_str == 'DrivenByProfile':
+                    if "CS_Profile_ID" in conv_info:
+                        strategy.profile = create_influxdb_profile(
+                            influxdb_profile_data=influxdb_profile_dict[conv_info["CS_Profile_ID"]],
+                            multiplier=1.0,
+                            physical_quantity="COST",
+                            unit="EURO"
+                        )
+                    else:
+                        print("You should specify a profile with a DrivenByProfile control strategy")
+
+                strategy.energyAsset = conv
+                add_control_strategy(esh, es, strategy)
+
+        if "MC_Value" in conv_info and conv_info["MC_Value"] not in [None, "", "NULL"]:
+            cost_info = esdl.CostInformation(id=str(uuid4()))
+            cost_info.marginalCosts = esdl.SingleValue(id=str(uuid4()), value=float(conv_info["MC_Value"]))
+            cost_info.marginalCosts.profileQuantityAndUnit = create_qau("COST", "EURO")
+            conv.costInformation = cost_info
+        elif "MC_Profile_ID" in conv_info and conv_info["MC_Profile_ID"] not in [None, "", "NULL"]:
+            cost_info = esdl.CostInformation(id=str(uuid4()))
+            cost_info.marginalCosts = create_influxdb_profile(
+                influxdb_profile_data=influxdb_profile_dict[conv_info["MC_Profile_ID"]],
+                multiplier=1.0,
+                physical_quantity="COST",
+                unit="EURO"
+            )
+            conv.costInformation = cost_info
 
         if conv_info["AreaBld_ID"] in [None, "", "NULL"]:
             tl_area.asset.append(conv)
