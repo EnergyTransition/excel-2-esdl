@@ -318,6 +318,25 @@ def add_producers_consumers(
         if "Sector_ID" in cp_info and cp_info["Sector_ID"] not in [None, "", "NULL"]:
             cp.sector = esh.get_by_id(cp_info["Sector_ID"])
 
+        if "Control_Strategy" in cp_info and cp_info["Control_Strategy"] not in [None, "", "NULL"]:
+            strategy_str = cp_info["Control_Strategy"]
+            if strategy_str not in ["CurtailmentStrategy"]:
+                print("Only CurtailmentStrategy is supported at this moment for Producers")
+            elif isinstance(cp, esdl.Consumer):
+                print("A Consumer cannot have a ControlStrategy")
+            else:
+                strategy_class = getattr(module, strategy_str)
+                strategy = strategy_class()
+                strategy.id = "CurtStr_" + cp.id
+
+                if "CS_Curt_MaxPower" in cp_info:
+                    strategy.maxPower = float(cp_info["CS_Curt_MaxPower"])
+                else:
+                    print("You should specify a maximum power for a CurtailmentStrategy")
+
+                strategy.energyAsset = cp
+                add_control_strategy(esh, es, strategy)
+
         if "MC_Value" in cp_info and cp_info["MC_Value"] not in [None, "", "NULL"]:
             cost_info = esdl.CostInformation(id=str(uuid4()))
             cost_info.marginalCosts = esdl.SingleValue(id=str(uuid4()), value=float(cp_info["MC_Value"]))
