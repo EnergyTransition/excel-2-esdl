@@ -364,6 +364,21 @@ def add_producers_consumers(
         esh.add_object(cp)
 
 
+def add_conversion_behaviour(esh, conv, conv_info):
+    if conv_info["Behaviour"] == "InputOutputRelation":
+        input_output_relation = esdl.InputOutputRelation(id="IOR_"+conv.id, name="InputOutputRelation for "+conv.name)
+        input_output_relation.mainPort = esh.get_by_id(conv_info["IOR_MainPort_ID"])
+
+        for i in range(1, 6):        # 1, 2, 3, 4, 5
+            if "IOR_Port"+str(i) in conv_info and conv_info["IOR_Port"+str(i)] not in [None, "", "NULL"]:
+                port = esh.get_by_id(conv_info["IOR_Port"+str(i)])
+                port_ratio = float(conv_info["IOR_Port"+str(i)+"_Ratio"])
+                main_port_relation = esdl.PortRelation(port=port, ratio=port_ratio)
+                input_output_relation.mainPortRelation.append(main_port_relation)
+
+        conv.behaviour.append(input_output_relation)
+
+
 def add_conversions(esh: EnergySystemHandler, es: EnergySystem, conv_dict: dict, influxdb_profile_dict: dict):
     tl_area = es.instance[0].area
 
@@ -383,7 +398,7 @@ def add_conversions(esh: EnergySystemHandler, es: EnergySystem, conv_dict: dict,
 
         set_attributes_values(conv, conv_info)
 
-        for ipx in range(1, 3):
+        for ipx in range(1, 4):     # 1, 2, 3
             if conv_info["InPort" + str(ipx) + "_ID"] not in [None, "", "NULL"]:
                 inp = esdl.InPort(
                     id=conv_info["InPort" + str(ipx) + "_ID"], name="In" + str(ipx)
@@ -391,7 +406,7 @@ def add_conversions(esh: EnergySystemHandler, es: EnergySystem, conv_dict: dict,
                 inp.carrier = esh.get_by_id(conv_info["InPort" + str(ipx) + "_Carrier"])
                 conv.port.append(inp)
                 esh.add_object(inp)
-        for opx in range(1, 3):
+        for opx in range(1, 4):     # 1, 2, 3
             if conv_info["OutPort" + str(opx) + "_ID"] not in [None, "", "NULL"]:
                 outp = esdl.OutPort(
                     id=conv_info["OutPort" + str(opx) + "_ID"], name="Out" + str(opx)
@@ -464,6 +479,12 @@ def add_conversions(esh: EnergySystemHandler, es: EnergySystem, conv_dict: dict,
                 unit="EURO"
             )
             conv.costInformation = cost_info
+
+        if "Behaviour" in conv_info and conv_info["Behaviour"] not in [None, "", "NULL"]:
+            if conv_info["Behaviour"] not in ["InputOutputRelation"]:
+                print("Only InputOutputRelation is supported at this moment")
+            else:
+                add_conversion_behaviour(esh, conv, conv_info)
 
         if conv_info["AreaBld_ID"] in [None, "", "NULL"]:
             tl_area.asset.append(conv)
