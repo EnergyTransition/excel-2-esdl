@@ -447,7 +447,7 @@ def add_conversions(esh: EnergySystemHandler, es: EnergySystem, conv_dict: dict,
                     if strategy_str == "DrivenByDemand":
                         strategy.outPort = port
                     elif strategy_str == 'DrivenBySupply':
-                        strategy.InPort = port
+                        strategy.inPort = port
                     elif strategy_str == 'DrivenByProfile':
                         strategy.port = port
 
